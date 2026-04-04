@@ -1,4 +1,6 @@
-export const authMiddleware = (req, res, next) => {
+import { supabase } from "../config/supabase.js";
+
+export const authMiddleware = async (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
 
   if (!token) {
@@ -10,7 +12,19 @@ export const authMiddleware = (req, res, next) => {
       Buffer.from(token.split(".")[1], "base64").toString()
     );
 
-    req.user = decoded;
+    // fetch role from DB
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", decoded.sub)
+      .single();
+
+    if (error) throw error;
+
+    req.user = {
+      id: decoded.sub,
+      role: data.role
+    };
 
     next();
   } catch (err) {
