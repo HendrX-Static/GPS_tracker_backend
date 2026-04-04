@@ -6,8 +6,12 @@ export const authMiddleware = (req, res, next) => {
   }
 
   try {
-    const decoded = JSON.parse(Buffer.from(token.split(".")[1], "base64").toString());
+    const decoded = JSON.parse(
+      Buffer.from(token.split(".")[1], "base64").toString()
+    );
+
     req.user = decoded;
+
     next();
   } catch (err) {
     return res.status(401).json({ error: "Invalid token" });

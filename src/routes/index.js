@@ -7,5 +7,8 @@ const router = express.Router();
 
 router.get("/devices", authMiddleware, getDevices);
 router.get("/positions", getPositions);
+router.get("/me", authMiddleware, (req, res) => {
+  res.json(req.user);
+});
 
 export default router;
