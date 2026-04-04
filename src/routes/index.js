@@ -3,6 +3,7 @@ import { authMiddleware } from "../middleware/auth.js";
 import { requireAdmin } from "../middleware/roles.js";
 import { getDevices } from "../controllers/deviceController.js";
 import { getPositions } from "../controllers/positionController.js";
+import { assignDevice } from "../controllers/deviceController.js";
 
 const router = express.Router();
 
