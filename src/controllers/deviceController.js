@@ -30,3 +30,64 @@ export const assignDevice = async (req, res) => {
 
   res.json({ message: "Device assigned successfully" });
 };
+export const registerDevice = async (req, res) => {
+  const userId = req.user.id;
+  const { imei, name } = req.body;
+
+  if (!imei) {
+    return res.status(400).json({ error: "IMEI required" });
+  }
+
+  try {
+    // 1. check if device exists
+    let { data: device } = await supabase
+      .from("devices")
+      .select("*")
+      .eq("imei", imei)
+      .single();
+
+    // 2. if not exists → create
+    if (!device) {
+      const { data: newDevice, error } = await supabase
+        .from("devices")
+        .insert({ imei, name })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      device = newDevice;
+    }
+
+    // 3. check if already assigned
+    const { data: existing } = await supabase
+      .from("user_devices")
+      .select("*")
+      .eq("device_id", device.id)
+      .single();
+
+    if (existing) {
+      return res.status(400).json({
+        error: "Device already registered"
+      });
+    }
+
+    // 4. assign to user
+    const { error } = await supabase
+      .from("user_devices")
+      .insert({
+        user_id: userId,
+        device_id: device.id
+      });
+
+    if (error) throw error;
+
+    res.json({
+      message: "Device registered successfully",
+      device
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
