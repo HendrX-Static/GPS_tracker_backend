@@ -26,10 +26,9 @@ export const getPositions = async (req, res) => {
     // 3. fetch from Traccar
     const positions = await getTraccarPositions();
 
-    // 4. filter only user's devices
-    const filtered = positions.filter(p =>
-      imeis.includes(p.deviceId?.toString())
-    );
+const filtered = positions.filter(p =>
+  devices.some(d => d.traccar_device_id === p.deviceId)
+);
 
     res.json(filtered);
 
