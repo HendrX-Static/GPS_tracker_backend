@@ -15,8 +15,10 @@ export const authMiddleware = async (req, res, next) => {
     }
 
     req.user = {
-      id: data.user.id
-    };
+  id: data.user.id,
+  role: data.user.user_metadata?.role || "user"
+};
+console.log("USER FROM TOKEN:", req.user); 
 
     next();
   } catch (err) {

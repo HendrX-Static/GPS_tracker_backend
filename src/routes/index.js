@@ -13,7 +13,8 @@ router.get("/sync-devices", async (req, res) => {
   await syncDevices();
   res.json({ message: "Synced" });
 });
-router.post("/register-device", authMiddleware, registerDevice);
+router.post("/devices", authMiddleware, adminOnly, createDevice);
+router.post("/assign-device", authMiddleware, adminOnly, assignDeviceToUser);
 router.get("/devices", (req, res, next) => {
   console.log("DEVICES ROUTE HIT");
   next();
