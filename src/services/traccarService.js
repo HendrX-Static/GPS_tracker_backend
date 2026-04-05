@@ -4,74 +4,23 @@ const TRACCAR_URL = process.env.TRACCAR_URL;
 const EMAIL = process.env.TRACCAR_EMAIL;
 const PASSWORD = process.env.TRACCAR_PASSWORD;
 
-// create axios instance
+// create axios instance with basic auth
 const api = axios.create({
   baseURL: TRACCAR_URL,
-  withCredentials: true
+  auth: {
+    username: EMAIL,
+    password: PASSWORD
+  }
 });
 
-let cookie = null;
-
-// login function
-const login = async () => {
-  const params = new URLSearchParams();
-  params.append("email", EMAIL);
-  params.append("password", PASSWORD);
-
-  const res = await axios.post(
-    `${TRACCAR_URL}/api/session`,
-    params,
-    {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      }
-    }
-  );
-
-  cookie = res.headers["set-cookie"];
+// get devices
+export const getTraccarDevices = async () => {
+  const res = await api.get("/api/devices");
+  return res.data;
 };
 
 // get positions
 export const getTraccarPositions = async () => {
-  try {
-    if (!cookie) {
-      await login();
-    }
-
-    const res = await api.get("/api/positions", {
-      headers: {
-        Cookie: cookie
-      }
-    });
-
-    return res.data;
-  } catch (err) {
-    console.error("TRACCAR ERROR:", err.response?.data || err.message);
-
-    // retry login once if session expired
-    await login();
-
-    const res = await api.get("/api/positions", {
-      headers: {
-        Cookie: cookie
-      }
-    });
-
-    return res.data;
-  }
-};
-
-// get devices
-export const getTraccarDevices = async () => {
-  if (!cookie) {
-    await login();
-  }
-
-  const res = await api.get("/api/devices", {
-    headers: {
-      Cookie: cookie
-    }
-  });
-
+  const res = await api.get("/api/positions");
   return res.data;
 };
