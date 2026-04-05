@@ -14,9 +14,13 @@ let cookie = null;
 
 // login function
 const login = async () => {
-  const res = await api.post(
-    "/api/session",
-    `email=${EMAIL}&password=${PASSWORD}`,
+  const params = new URLSearchParams();
+  params.append("email", EMAIL);
+  params.append("password", PASSWORD);
+
+  const res = await axios.post(
+    `${TRACCAR_URL}/api/session`,
+    params,
     {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded"
