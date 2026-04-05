@@ -1,7 +1,11 @@
 import express from "express";
 import { authMiddleware } from "../middleware/auth.js";
 import { requireAdmin } from "../middleware/roles.js";
-import { getDevices } from "../controllers/deviceController.js";
+import { 
+  getDevices, 
+  createDevice, 
+  assignDeviceToUser 
+} from "../controllers/deviceController.js";
 import { getPositions } from "../controllers/positionController.js";
 import { assignDevice } from "../controllers/deviceController.js";
 import { syncDevices } from "../services/deviceSyncService.js";
