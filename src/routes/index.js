@@ -14,7 +14,7 @@ router.get("/sync-devices", async (req, res) => {
   res.json({ message: "Synced" });
 });
 router.post("/register-device", authMiddleware, registerDevice);
-router.get("/devices", authMiddleware, getDevices);
+router.get("/devices", getDevices);
 router.get("/positions", authMiddleware, getPositions);
 router.get("/me", authMiddleware, (req, res) => {
   res.json(req.user);
