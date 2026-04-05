@@ -8,26 +8,18 @@ export const authMiddleware = async (req, res, next) => {
   }
 
   try {
-    const decoded = JSON.parse(
-      Buffer.from(token.split(".")[1], "base64").toString()
-    );
+    const { data, error } = await supabase.auth.getUser(token);
 
-    // fetch role from DB
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", decoded.sub)
-      .single();
-
-    if (error) throw error;
+    if (error || !data.user) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
 
     req.user = {
-      id: decoded.sub,
-      role: data.role
+      id: data.user.id
     };
 
     next();
   } catch (err) {
-    return res.status(401).json({ error: "Invalid token" });
+    return res.status(401).json({ error: "Auth failed" });
   }
 };
