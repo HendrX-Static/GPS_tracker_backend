@@ -2,7 +2,7 @@ import { supabase } from "../config/supabase.js";
 import { getTraccarPositions } from "../services/traccarService.js";
 
 export const getDevices = async (req, res) => {
-  const userId = req.user.id;
+  const userId = "f6eccf94-e690-4c38-8cd4-276dbc5ae132"; // hardcoded for testing
 
   try {
     // 1. get user's devices
