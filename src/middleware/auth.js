@@ -13,12 +13,25 @@ export const authMiddleware = async (req, res, next) => {
     return res.status(401).json({ error: "Invalid token" });
   }
 
+  const userId = data.user.id;
+
+  // 🔥 FETCH ROLE FROM PROFILES TABLE
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .single();
+
+  if (profileError || !profile) {
+    return res.status(401).json({ error: "User profile not found" });
+  }
+
   req.user = {
-    id: data.user.id,
-    role: data.user.user_metadata?.role || "user"
+    id: userId,
+    role: profile.role
   };
 
-  console.log("USER FROM TOKEN:", req.user); // keep this for now
+  console.log("USER:", req.user);
 
   next();
 };

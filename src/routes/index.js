@@ -1,6 +1,5 @@
 import express from "express";
 import { authMiddleware } from "../middleware/auth.js";
-import { requireAdmin } from "../middleware/roles.js";
 import { 
   getDevices, 
   createDevice, 
@@ -24,11 +23,5 @@ router.get("/positions", authMiddleware, getPositions);
 router.get("/me", authMiddleware, (req, res) => {
   res.json(req.user);
 });
-router.post(
-  "/assign-device",
-  authMiddleware,
-  requireAdmin,
-  assignDevice
-);
 
 export default router;
