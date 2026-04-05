@@ -6,7 +6,6 @@ import {
   assignDeviceToUser 
 } from "../controllers/deviceController.js";
 import { getPositions } from "../controllers/positionController.js";
-import { assignDevice } from "../controllers/deviceController.js";
 import { syncDevices } from "../services/deviceSyncService.js";
 import { adminOnly } from "../middleware/roles.js";
 
