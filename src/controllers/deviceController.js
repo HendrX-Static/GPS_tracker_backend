@@ -1,16 +1,52 @@
 import { supabase } from "../config/supabase.js";
+import { getTraccarPositions } from "../services/traccarService.js";
 
 export const getDevices = async (req, res) => {
-  const userId = req.user.sub;
+  const userId = req.user.id;
 
-  const { data, error } = await supabase
-    .from("user_devices")
-    .select("devices(*)")
-    .eq("user_id", userId);
+  try {
+    // 1. get user's devices
+    const { data: userDevices } = await supabase
+      .from("user_devices")
+      .select("device_id")
+      .eq("user_id", userId);
 
-  if (error) return res.status(500).json(error);
+    const deviceIds = userDevices.map(d => d.device_id);
 
-  res.json(data.map(d => d.devices));
+    if (deviceIds.length === 0) return res.json([]);
+
+    // 2. get device details
+    const { data: devices } = await supabase
+      .from("devices")
+      .select("*")
+      .in("id", deviceIds);
+
+    // 3. get positions from traccar
+    const positions = await getTraccarPositions();
+
+    // 4. merge data
+    const result = devices.map(device => {
+      const position = positions.find(
+        p => p.deviceId === device.traccar_device_id
+      );
+
+      return {
+        id: device.id,
+        name: device.name || "Unnamed Device",
+        imei: device.imei,
+        status: position ? "online" : "offline",
+        lastUpdate: position?.fixTime || null,
+        speed: position?.speed || 0,
+        latitude: position?.latitude || null,
+        longitude: position?.longitude || null
+      };
+    });
+
+    res.json(result);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 export const assignDevice = async (req, res) => {
   const { user_id, device_id } = req.body;
