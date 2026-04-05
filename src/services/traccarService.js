@@ -15,8 +15,17 @@ const api = axios.create({
 
 // get devices
 export const getTraccarDevices = async () => {
-  const res = await api.get("/api/devices");
-  return res.data;
+   try {
+    console.log("TRACCAR URL:", TRACCAR_URL);
+
+    const res = await api.get("/api/devices");
+
+    return res.data;
+  } catch (err) {
+    console.error("TRACCAR ERROR FULL:", err.message);
+    console.error("TRACCAR ERROR RESPONSE:", err.response?.data);
+    throw err;
+  }
 };
 
 // get positions
