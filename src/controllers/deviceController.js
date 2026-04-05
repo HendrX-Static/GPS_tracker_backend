@@ -2,27 +2,51 @@ import { supabase } from "../config/supabase.js";
 import { getTraccarPositions } from "../services/traccarService.js";
 
 export const getDevices = async (req, res) => {
-  const userId = "f6eccf94-e690-4c38-8cd4-276dbc5ae132"; // hardcoded for testing
+  console.log("CONTROLLER STARTED");
 
   try {
+    const userId = "f6eccf94-e690-4c38-8cd4-276dbc5ae132";
+    console.log("User ID:", userId);
+
     // 1. get user's devices
-    const { data: userDevices } = await supabase
+    const { data: userDevices, error: userDevicesError } = await supabase
       .from("user_devices")
       .select("device_id")
       .eq("user_id", userId);
 
-    const deviceIds = userDevices.map(d => d.device_id);
+    if (userDevicesError) {
+      console.error("Supabase userDevices error:", userDevicesError);
+      return res.status(500).json({ error: userDevicesError.message });
+    }
 
-    if (deviceIds.length === 0) return res.json([]);
+    console.log("UserDevices:", userDevices);
+
+    // ✅ FIX: safe mapping
+    const deviceIds = userDevices?.map(d => d.device_id) || [];
+
+    console.log("Device IDs:", deviceIds);
+
+    if (deviceIds.length === 0) {
+      console.log("No devices found");
+      return res.json([]);
+    }
 
     // 2. get device details
-    const { data: devices } = await supabase
+    const { data: devices, error: devicesError } = await supabase
       .from("devices")
       .select("*")
       .in("id", deviceIds);
 
+    if (devicesError) {
+      console.error("Supabase devices error:", devicesError);
+      return res.status(500).json({ error: devicesError.message });
+    }
+
+    console.log("Devices:", devices);
+
     // 3. get positions from traccar
     const positions = await getTraccarPositions();
+    console.log("Positions:", positions);
 
     // 4. merge data
     const result = devices.map(device => {
@@ -45,6 +69,7 @@ export const getDevices = async (req, res) => {
     res.json(result);
 
   } catch (err) {
+    console.error("CONTROLLER ERROR:", err); // 🔥 VERY IMPORTANT
     res.status(500).json({ error: err.message });
   }
 };
