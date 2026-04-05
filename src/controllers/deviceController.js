@@ -2,11 +2,9 @@ import { supabase } from "../config/supabase.js";
 import { getTraccarPositions } from "../services/traccarService.js";
 
 export const getDevices = async (req, res) => {
-  console.log("CONTROLLER STARTED");
 
   try {
-    const userId = "f6eccf94-e690-4c38-8cd4-276dbc5ae132";
-    console.log("User ID:", userId);
+    const userId = req.user.id;
 
     // 1. get user's devices
     const { data: userDevices, error: userDevicesError } = await supabase
@@ -19,12 +17,10 @@ export const getDevices = async (req, res) => {
       return res.status(500).json({ error: userDevicesError.message });
     }
 
-    console.log("UserDevices:", userDevices);
 
     // ✅ FIX: safe mapping
     const deviceIds = userDevices?.map(d => d.device_id) || [];
 
-    console.log("Device IDs:", deviceIds);
 
     if (deviceIds.length === 0) {
       console.log("No devices found");
@@ -42,11 +38,9 @@ export const getDevices = async (req, res) => {
       return res.status(500).json({ error: devicesError.message });
     }
 
-    console.log("Devices:", devices);
 
     // 3. get positions from traccar
     const positions = await getTraccarPositions();
-    console.log("Positions:", positions);
 
     // 4. merge data
     const result = devices.map(device => {

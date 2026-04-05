@@ -15,10 +15,7 @@ router.get("/sync-devices", async (req, res) => {
 });
 router.post("/devices", authMiddleware, adminOnly, createDevice);
 router.post("/assign-device", authMiddleware, adminOnly, assignDeviceToUser);
-router.get("/devices", (req, res, next) => {
-  console.log("DEVICES ROUTE HIT");
-  next();
-}, getDevices);
+router.get("/devices", authMiddleware, getDevices);
 router.get("/positions", authMiddleware, getPositions);
 router.get("/me", authMiddleware, (req, res) => {
   res.json(req.user);
