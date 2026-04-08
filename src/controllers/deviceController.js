@@ -14,6 +14,7 @@ const safeGetTraccarPositions = async () => {
     return [];
   }
 };
+const ONLINE_THRESHOLD_SECONDS = 120;
 
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
@@ -42,9 +43,17 @@ const buildDevicePayload = async (device, position) => {
   const attrs = position?.attributes || {};
   const lastSeen =
     position?.fixTime || position?.deviceTime || position?.serverTime || null;
-  const isOnline = !!position;
+  const lastSeenMs = lastSeen ? new Date(lastSeen).getTime() : null;
+  const now = Date.now();
+  const ageSeconds =
+    lastSeenMs && Number.isFinite(lastSeenMs)
+      ? Math.max(0, Math.floor((now - lastSeenMs) / 1000))
+      : Number.POSITIVE_INFINITY;
+  const isOnline = !!position && ageSeconds <= ONLINE_THRESHOLD_SECONDS;
 
-  const speedKmh = Math.max(0, Math.round(toNumber(position?.speed, 0) * 1.852 * 10) / 10);
+  const speedKmh = isOnline
+    ? Math.max(0, Math.round(toNumber(position?.speed, 0) * 1.852 * 10) / 10)
+    : 0;
   const batteryPercent = toNumber(attrs.batteryLevel ?? attrs.battery, 0);
   const voltage = toNumber(
     attrs.voltage ?? attrs.powerVoltage ?? attrs.externalPowerVoltage ?? attrs.power,
@@ -52,7 +61,8 @@ const buildDevicePayload = async (device, position) => {
   );
   const ignitionOn = boolFrom(attrs.ignition, false);
   const mainPowerOn = boolFrom(attrs.power ?? attrs.charge, false);
-  const gsmSignal = toNumber(attrs.rssi ?? attrs.signal ?? attrs.gsm, 0);
+  const gsmRaw = attrs.rssi ?? attrs.gsm ?? attrs.csq ?? null;
+  const gsmSignal = gsmRaw == null ? null : toNumber(gsmRaw, 0);
   const satelliteSignal = toNumber(
     attrs.sat ??
       attrs.satellites ??
@@ -67,8 +77,6 @@ const buildDevicePayload = async (device, position) => {
     0
   );
 
-  const now = Date.now();
-  const lastSeenMs = lastSeen ? new Date(lastSeen).getTime() : null;
   const offlineForSeconds =
     !isOnline && lastSeenMs && Number.isFinite(lastSeenMs)
       ? Math.max(0, Math.floor((now - lastSeenMs) / 1000))
