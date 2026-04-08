@@ -54,7 +54,16 @@ const buildDevicePayload = async (device, position) => {
   const mainPowerOn = boolFrom(attrs.power ?? attrs.charge, false);
   const gsmSignal = toNumber(attrs.rssi ?? attrs.signal ?? attrs.gsm, 0);
   const satelliteSignal = toNumber(
-    attrs.sat ?? attrs.satellites ?? attrs.satVisible ?? attrs.gpsSat,
+    attrs.sat ??
+      attrs.satellites ??
+      attrs.satVisible ??
+      attrs.gpsSat ??
+      attrs.gpsSats ??
+      attrs.satCount ??
+      attrs.satelliteCount ??
+      attrs.satUsed ??
+      attrs.satellitesUsed ??
+      attrs.satellite,
     0
   );
 
