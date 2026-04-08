@@ -38,14 +38,28 @@ const formatLocationText = (position) => {
     null;
 
   if (address) {
-    return address;
+    const parts = String(address)
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    const areaParts = parts.filter((part) => {
+      const lower = part.toLowerCase();
+      if (lower === "india") return false;
+      if (/^\d{4,8}$/.test(part)) return false;
+      return true;
+    });
+
+    if (areaParts.length >= 2) {
+      return `${areaParts[0]}, ${areaParts[1]}`;
+    }
+
+    if (areaParts.length === 1) {
+      return areaParts[0];
+    }
   }
 
-  if (position?.latitude != null && position?.longitude != null) {
-    return `${Number(position.latitude).toFixed(5)}, ${Number(position.longitude).toFixed(5)}`;
-  }
-
-  return "Unknown location";
+  return "Area unavailable";
 };
 
 const buildDevicePayload = (device, position) => {
