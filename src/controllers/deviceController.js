@@ -4,6 +4,7 @@ import {
   deleteTraccarDevice,
   getTraccarPositions
 } from "../services/traccarService.js";
+import { reverseGeocodeArea } from "../services/geocodingService.js";
 
 const safeGetTraccarPositions = async () => {
   try {
@@ -30,39 +31,14 @@ const boolFrom = (value, fallback = false) => {
   return fallback;
 };
 
-const formatLocationText = (position) => {
-  const address =
-    position?.address ||
-    position?.attributes?.address ||
-    position?.attributes?.displayName ||
-    null;
-
-  if (address) {
-    const parts = String(address)
-      .split(",")
-      .map((part) => part.trim())
-      .filter(Boolean);
-
-    const areaParts = parts.filter((part) => {
-      const lower = part.toLowerCase();
-      if (lower === "india") return false;
-      if (/^\d{4,8}$/.test(part)) return false;
-      return true;
-    });
-
-    if (areaParts.length >= 2) {
-      return `${areaParts[0]}, ${areaParts[1]}`;
-    }
-
-    if (areaParts.length === 1) {
-      return areaParts[0];
-    }
-  }
+const formatLocationText = async (position) => {
+  const reverseArea = await reverseGeocodeArea(position?.latitude, position?.longitude);
+  if (reverseArea) return reverseArea;
 
   return "Area unavailable";
 };
 
-const buildDevicePayload = (device, position) => {
+const buildDevicePayload = async (device, position) => {
   const attrs = position?.attributes || {};
   const lastSeen =
     position?.fixTime || position?.deviceTime || position?.serverTime || null;
@@ -89,7 +65,7 @@ const buildDevicePayload = (device, position) => {
       ? Math.max(0, Math.floor((now - lastSeenMs) / 1000))
       : 0;
 
-  const locationText = formatLocationText(position);
+  const locationText = await formatLocationText(position);
 
   return {
     id: device.id,
@@ -191,13 +167,13 @@ export const getDevices = async (req, res) => {
     const positions = await safeGetTraccarPositions();
 
     // 4. merge data
-    const result = devices.map((device) => {
+    const result = await Promise.all(devices.map(async (device) => {
       const position = positions.find(
         (p) => p.deviceId === device.traccar_device_id
       );
 
-      return buildDevicePayload(device, position);
-    });
+      return await buildDevicePayload(device, position);
+    }));
 
     res.json(result);
 
@@ -347,10 +323,10 @@ export const getDevicesForUser = async (req, res) => {
 
     const positions = await safeGetTraccarPositions();
 
-    const result = (devices || []).map((device) => {
+    const result = await Promise.all((devices || []).map(async (device) => {
       const position = positions.find((p) => p.deviceId === device.traccar_device_id);
-      return buildDevicePayload(device, position);
-    });
+      return await buildDevicePayload(device, position);
+    }));
 
     res.json(result);
   } catch (err) {
