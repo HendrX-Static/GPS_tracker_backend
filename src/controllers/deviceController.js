@@ -1,5 +1,9 @@
 import { supabase } from "../config/supabase.js";
-import { getTraccarPositions } from "../services/traccarService.js";
+import {
+  createTraccarDevice,
+  deleteTraccarDevice,
+  getTraccarPositions
+} from "../services/traccarService.js";
 
 export const getDevices = async (req, res) => {
 
@@ -75,18 +79,65 @@ export const createDevice = async (req, res) => {
       return res.status(400).json({ error: "Name and IMEI required" });
     }
 
-    const { data, error } = await supabase
+    const normalizedName = name.trim();
+    const normalizedImei = String(imei).trim();
+
+    if (!normalizedName || !normalizedImei) {
+      return res.status(400).json({ error: "Name and IMEI required" });
+    }
+
+    const { data: existingDevice, error: existingDeviceError } = await supabase
       .from("devices")
-      .insert([{ name, imei }])
+      .select("id")
+      .eq("imei", normalizedImei)
+      .maybeSingle();
+
+    if (existingDeviceError) throw existingDeviceError;
+
+    if (existingDevice) {
+      return res.status(409).json({ error: "Device with this IMEI already exists" });
+    }
+
+    const traccarDevice = await createTraccarDevice({
+      name: normalizedName,
+      imei: normalizedImei
+    });
+
+    let createdDevice;
+
+    try {
+      const { data, error } = await supabase
+      .from("devices")
+      .insert([{
+        name: normalizedName,
+        imei: normalizedImei,
+        traccar_device_id: traccarDevice.id
+      }])
       .select()
       .single();
 
-    if (error) throw error;
+      if (error) throw error;
 
-    res.json(data);
+      createdDevice = data;
+    } catch (dbError) {
+      try {
+        await deleteTraccarDevice(traccarDevice.id);
+      } catch (rollbackError) {
+        console.error("ROLLBACK ERROR:", rollbackError.message);
+      }
+
+      throw dbError;
+    }
+
+    res.json(createdDevice);
 
   } catch (err) {
     console.error(err);
+
+    if (err.response?.status === 409) {
+      return res.status(409).json({ error: "Device already exists in Traccar" });
+    }
+
     res.status(500).json({ error: err.message });
   }
 };

@@ -28,6 +28,31 @@ export const getTraccarDevices = async () => {
   }
 };
 
+export const createTraccarDevice = async ({ name, imei }) => {
+  try {
+    const res = await api.post("/api/devices", {
+      name,
+      uniqueId: imei
+    });
+
+    return res.data;
+  } catch (err) {
+    console.error("TRACCAR CREATE DEVICE ERROR:", err.message);
+    console.error("TRACCAR CREATE DEVICE RESPONSE:", err.response?.data);
+    throw err;
+  }
+};
+
+export const deleteTraccarDevice = async (deviceId) => {
+  try {
+    await api.delete(`/api/devices/${deviceId}`);
+  } catch (err) {
+    console.error("TRACCAR DELETE DEVICE ERROR:", err.message);
+    console.error("TRACCAR DELETE DEVICE RESPONSE:", err.response?.data);
+    throw err;
+  }
+};
+
 // get positions
 export const getTraccarPositions = async () => {
   const res = await api.get("/api/positions");
