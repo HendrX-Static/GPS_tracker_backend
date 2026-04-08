@@ -28,7 +28,8 @@ export const authMiddleware = async (req, res, next) => {
 
   req.user = {
     id: userId,
-    role: profile.role
+    role: profile.role,
+    email: data.user.email
   };
 
   console.log("USER:", req.user);

@@ -9,39 +9,73 @@ export const getDevices = async (req, res) => {
 
   try {
     const userId = req.user.id;
+    const isAdmin = req.user.role === "admin";
+    const userEmail = req.user.email;
 
-    // 1. get user's devices
-    const { data: userDevices, error: userDevicesError } = await supabase
-      .from("user_devices")
-      .select("device_id")
-      .eq("user_id", userId);
+    let devices;
 
-    if (userDevicesError) {
-      console.error("Supabase userDevices error:", userDevicesError);
-      return res.status(500).json({ error: userDevicesError.message });
+    if (isAdmin) {
+      const { data, error } = await supabase
+        .from("devices")
+        .select("*");
+
+      if (error) {
+        console.error("Supabase devices error:", error);
+        return res.status(500).json({ error: error.message });
+      }
+
+      devices = data || [];
+    } else {
+      // Get candidate profile IDs for this logged-in auth user.
+      // This supports both strict auth-id mapping and older email-linked rows.
+      const candidateUserIds = new Set([userId]);
+
+      if (userEmail) {
+        const { data: profileByEmail, error: profileByEmailError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("email", userEmail)
+          .maybeSingle();
+
+        if (profileByEmailError) {
+          console.error("Supabase profileByEmail error:", profileByEmailError);
+        } else if (profileByEmail?.id) {
+          candidateUserIds.add(profileByEmail.id);
+        }
+      }
+
+      const candidateUserIdsArray = Array.from(candidateUserIds);
+
+      // 1. get user's assigned devices
+      const { data: userDevices, error: userDevicesError } = await supabase
+        .from("user_devices")
+        .select("device_id")
+        .in("user_id", candidateUserIdsArray);
+
+      if (userDevicesError) {
+        console.error("Supabase userDevices error:", userDevicesError);
+        return res.status(500).json({ error: userDevicesError.message });
+      }
+
+      const deviceIds = userDevices?.map((d) => d.device_id) || [];
+
+      if (deviceIds.length === 0) {
+        return res.json([]);
+      }
+
+      // 2. get device details
+      const { data, error } = await supabase
+        .from("devices")
+        .select("*")
+        .in("id", deviceIds);
+
+      if (error) {
+        console.error("Supabase devices error:", error);
+        return res.status(500).json({ error: error.message });
+      }
+
+      devices = data || [];
     }
-
-
-    // ✅ FIX: safe mapping
-    const deviceIds = userDevices?.map(d => d.device_id) || [];
-
-
-    if (deviceIds.length === 0) {
-      console.log("No devices found");
-      return res.json([]);
-    }
-
-    // 2. get device details
-    const { data: devices, error: devicesError } = await supabase
-      .from("devices")
-      .select("*")
-      .in("id", deviceIds);
-
-    if (devicesError) {
-      console.error("Supabase devices error:", devicesError);
-      return res.status(500).json({ error: devicesError.message });
-    }
-
 
     // 3. get positions from traccar
     const positions = await getTraccarPositions();
