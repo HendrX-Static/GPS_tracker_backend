@@ -5,6 +5,15 @@ import {
   getTraccarPositions
 } from "../services/traccarService.js";
 
+const safeGetTraccarPositions = async () => {
+  try {
+    return await getTraccarPositions();
+  } catch (error) {
+    console.error("TRACCAR POSITIONS ERROR:", error.message);
+    return [];
+  }
+};
+
 export const getDevices = async (req, res) => {
 
   try {
@@ -78,7 +87,7 @@ export const getDevices = async (req, res) => {
     }
 
     // 3. get positions from traccar
-    const positions = await getTraccarPositions();
+    const positions = await safeGetTraccarPositions();
 
     // 4. merge data
     const result = devices.map(device => {
@@ -236,7 +245,7 @@ export const getDevicesForUser = async (req, res) => {
 
     if (devicesError) throw devicesError;
 
-    const positions = await getTraccarPositions();
+    const positions = await safeGetTraccarPositions();
 
     const result = (devices || []).map((device) => {
       const position = positions.find((p) => p.deviceId === device.traccar_device_id);
