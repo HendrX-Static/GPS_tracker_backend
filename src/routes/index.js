@@ -8,6 +8,7 @@ import {
 import { getPositions } from "../controllers/positionController.js";
 import { syncDevices } from "../services/deviceSyncService.js";
 import { adminOnly } from "../middleware/roles.js";
+import { getUsers } from "../controllers/userController.js";
 
 const router = express.Router();
 
@@ -18,6 +19,7 @@ router.get("/sync-devices", async (req, res) => {
 router.post("/devices", authMiddleware, adminOnly, createDevice);
 router.post("/assign-device", authMiddleware, adminOnly, assignDeviceToUser);
 router.get("/devices", authMiddleware, getDevices);
+router.get("/users", authMiddleware, adminOnly, getUsers);
 router.get("/positions", authMiddleware, getPositions);
 router.get("/me", authMiddleware, (req, res) => {
   res.json(req.user);
