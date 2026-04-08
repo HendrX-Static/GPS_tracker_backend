@@ -208,3 +208,120 @@ export const assignDeviceToUser = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+export const getDevicesForUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: "userId required" });
+    }
+
+    const { data: userDevices, error: userDevicesError } = await supabase
+      .from("user_devices")
+      .select("device_id")
+      .eq("user_id", userId);
+
+    if (userDevicesError) throw userDevicesError;
+
+    const deviceIds = (userDevices || []).map((d) => d.device_id);
+    if (deviceIds.length === 0) {
+      return res.json([]);
+    }
+
+    const { data: devices, error: devicesError } = await supabase
+      .from("devices")
+      .select("*")
+      .in("id", deviceIds);
+
+    if (devicesError) throw devicesError;
+
+    const positions = await getTraccarPositions();
+
+    const result = (devices || []).map((device) => {
+      const position = positions.find((p) => p.deviceId === device.traccar_device_id);
+      return {
+        id: device.id,
+        name: device.name || "Unnamed Device",
+        imei: device.imei,
+        status: position ? "online" : "offline",
+        lastUpdate: position?.fixTime || null,
+        speed: position?.speed || 0,
+        latitude: position?.latitude || null,
+        longitude: position?.longitude || null
+      };
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const unassignDeviceFromUser = async (req, res) => {
+  try {
+    const { userId, deviceId } = req.body;
+
+    if (!userId || !deviceId) {
+      return res.status(400).json({ error: "userId and deviceId required" });
+    }
+
+    const { error } = await supabase
+      .from("user_devices")
+      .delete()
+      .eq("user_id", userId)
+      .eq("device_id", deviceId);
+
+    if (error) throw error;
+
+    res.json({ message: "Device unassigned successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const deleteDevice = async (req, res) => {
+  try {
+    const { deviceId } = req.params;
+
+    if (!deviceId) {
+      return res.status(400).json({ error: "deviceId required" });
+    }
+
+    const { data: device, error: deviceError } = await supabase
+      .from("devices")
+      .select("id, traccar_device_id")
+      .eq("id", deviceId)
+      .maybeSingle();
+
+    if (deviceError) throw deviceError;
+    if (!device) {
+      return res.status(404).json({ error: "Device not found" });
+    }
+
+    if (device.traccar_device_id) {
+      await deleteTraccarDevice(device.traccar_device_id);
+    }
+
+    const { error: assignmentDeleteError } = await supabase
+      .from("user_devices")
+      .delete()
+      .eq("device_id", deviceId);
+
+    if (assignmentDeleteError) throw assignmentDeleteError;
+
+    const { error: dbDeleteError } = await supabase
+      .from("devices")
+      .delete()
+      .eq("id", deviceId);
+
+    if (dbDeleteError) throw dbDeleteError;
+
+    res.json({ message: "Device deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
