@@ -14,6 +14,93 @@ const safeGetTraccarPositions = async () => {
   }
 };
 
+const toNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const boolFrom = (value, fallback = false) => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value > 0;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "on", "1", "yes"].includes(normalized)) return true;
+    if (["false", "off", "0", "no"].includes(normalized)) return false;
+  }
+  return fallback;
+};
+
+const formatLocationText = (position) => {
+  const address =
+    position?.address ||
+    position?.attributes?.address ||
+    position?.attributes?.displayName ||
+    null;
+
+  if (address) {
+    return address;
+  }
+
+  if (position?.latitude != null && position?.longitude != null) {
+    return `${Number(position.latitude).toFixed(5)}, ${Number(position.longitude).toFixed(5)}`;
+  }
+
+  return "Unknown location";
+};
+
+const buildDevicePayload = (device, position) => {
+  const attrs = position?.attributes || {};
+  const lastSeen =
+    position?.fixTime || position?.deviceTime || position?.serverTime || null;
+  const isOnline = !!position;
+
+  const speedKmh = Math.max(0, Math.round(toNumber(position?.speed, 0) * 1.852 * 10) / 10);
+  const batteryPercent = toNumber(attrs.batteryLevel ?? attrs.battery, 0);
+  const voltage = toNumber(
+    attrs.voltage ?? attrs.powerVoltage ?? attrs.externalPowerVoltage ?? attrs.power,
+    0
+  );
+  const ignitionOn = boolFrom(attrs.ignition, false);
+  const mainPowerOn = boolFrom(attrs.power ?? attrs.charge, false);
+  const gsmSignal = toNumber(attrs.rssi ?? attrs.signal ?? attrs.gsm, 0);
+  const satelliteSignal = toNumber(
+    attrs.sat ?? attrs.satellites ?? attrs.satVisible ?? attrs.gpsSat,
+    0
+  );
+
+  const now = Date.now();
+  const lastSeenMs = lastSeen ? new Date(lastSeen).getTime() : null;
+  const offlineForSeconds =
+    !isOnline && lastSeenMs && Number.isFinite(lastSeenMs)
+      ? Math.max(0, Math.floor((now - lastSeenMs) / 1000))
+      : 0;
+
+  const locationText = formatLocationText(position);
+
+  return {
+    id: device.id,
+    name: device.name || "Unnamed Device",
+    imei: device.imei,
+    status: isOnline ? "online" : "offline",
+    lastUpdate: lastSeen,
+    speed: speedKmh,
+    latitude: position?.latitude ?? null,
+    longitude: position?.longitude ?? null,
+    locationText,
+    currentLocation: locationText,
+    lastKnownLocation: locationText,
+    currentTime: new Date().toISOString(),
+    lastConnectedTime: lastSeen,
+    offlineForSeconds,
+    ignitionOn,
+    mainPowerOn,
+    batteryPercent,
+    voltage,
+    gsmSignal,
+    satelliteSignal,
+  };
+};
+
 export const getDevices = async (req, res) => {
 
   try {
@@ -90,21 +177,12 @@ export const getDevices = async (req, res) => {
     const positions = await safeGetTraccarPositions();
 
     // 4. merge data
-    const result = devices.map(device => {
+    const result = devices.map((device) => {
       const position = positions.find(
-        p => p.deviceId === device.traccar_device_id
+        (p) => p.deviceId === device.traccar_device_id
       );
 
-      return {
-        id: device.id,
-        name: device.name || "Unnamed Device",
-        imei: device.imei,
-        status: position ? "online" : "offline",
-        lastUpdate: position?.fixTime || null,
-        speed: position?.speed || 0,
-        latitude: position?.latitude || null,
-        longitude: position?.longitude || null
-      };
+      return buildDevicePayload(device, position);
     });
 
     res.json(result);
@@ -257,16 +335,7 @@ export const getDevicesForUser = async (req, res) => {
 
     const result = (devices || []).map((device) => {
       const position = positions.find((p) => p.deviceId === device.traccar_device_id);
-      return {
-        id: device.id,
-        name: device.name || "Unnamed Device",
-        imei: device.imei,
-        status: position ? "online" : "offline",
-        lastUpdate: position?.fixTime || null,
-        speed: position?.speed || 0,
-        latitude: position?.latitude || null,
-        longitude: position?.longitude || null
-      };
+      return buildDevicePayload(device, position);
     });
 
     res.json(result);
