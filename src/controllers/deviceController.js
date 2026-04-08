@@ -180,6 +180,14 @@ export const createDevice = async (req, res) => {
     if (err.response?.status === 409) {
       return res.status(409).json({ error: "Device already exists in Traccar" });
     }
+    if (err.response?.status === 401) {
+      return res.status(502).json({
+        error: "Traccar authentication failed. Check TRACCAR_EMAIL and TRACCAR_PASSWORD.",
+      });
+    }
+    if (String(err.message || "").includes("TRACCAR_")) {
+      return res.status(500).json({ error: err.message });
+    }
 
     res.status(500).json({ error: err.message });
   }
