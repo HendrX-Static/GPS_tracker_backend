@@ -12,6 +12,7 @@ import { getPositions } from "../controllers/positionController.js";
 import { syncDevices } from "../services/deviceSyncService.js";
 import { adminOnly } from "../middleware/roles.js";
 import { getUsers } from "../controllers/userController.js";
+import { getTripHistory, getTripPlayback } from "../controllers/tripController.js";
 
 const router = express.Router();
 
@@ -27,6 +28,8 @@ router.get("/devices", authMiddleware, getDevices);
 router.get("/users", authMiddleware, adminOnly, getUsers);
 router.get("/users/:userId/devices", authMiddleware, adminOnly, getDevicesForUser);
 router.get("/positions", authMiddleware, getPositions);
+router.get("/trips", authMiddleware, getTripHistory);
+router.get("/trip-playback", authMiddleware, getTripPlayback);
 router.get("/me", authMiddleware, (req, res) => {
   res.json(req.user);
 });

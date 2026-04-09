@@ -71,3 +71,19 @@ export const getTraccarPositions = async () => {
   const res = await api.get("/api/positions");
   return res.data;
 };
+
+export const getTraccarTrips = async (deviceId, from, to) => {
+  ensureTraccarConfig();
+  const res = await api.get("/api/reports/trips", {
+    params: { deviceId, from, to },
+  });
+  return res.data;
+};
+
+export const getTraccarRoute = async (deviceId, from, to) => {
+  ensureTraccarConfig();
+  const res = await api.get("/api/reports/route", {
+    params: { deviceId, from, to },
+  });
+  return res.data;
+};
